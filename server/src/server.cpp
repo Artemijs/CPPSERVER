@@ -10,28 +10,15 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <netdb.h>
-Server::Server(){}
+iServer::iServer(){}
 
-Server::Server(int port) : _port(port), _end(false){
+iServer::iServer(int port) : _port(port), _end(false){
     tcpSetUpSocket();
     udpSetUpSocket(); 
     _allMsgHandles = std::vector<function_ptr>(); 
-    _callHandler = ServerCallbacks(_udpSock, _tcpSock);
-    loadHandles();
-    //tcpListen();
 }
-void Server::loadHandles(){
-   _callHandler.loadCallbacks(&_allMsgHandles);
-}
-void Server::udpSetUpSocket(){
-   //printf("online\n");
-   // int sock, length, n;
-   // unsigned int fromlen;
+void iServer::udpSetUpSocket(){
     struct sockaddr_in server;
-   // char buff[1024];
- //   int connCount =0;
-
-//    struct sockaddr_in all_conns[10];    
 
     _udpSock = socket(AF_INET, SOCK_DGRAM, 0);
     if(_udpSock <0) error("ERROR creating sock\n");
@@ -45,7 +32,7 @@ void Server::udpSetUpSocket(){
         error("ERROR on bind\n");
 
 }
-void Server::tcpSetUpSocket(){
+void iServer::tcpSetUpSocket(){
     _tcpSock = socket(AF_INET, SOCK_STREAM, 0);
     if(_tcpSock <0){
         error("ERROR opening socket \n");
@@ -63,7 +50,7 @@ void Server::tcpSetUpSocket(){
     
     listen(_tcpSock, 5);
 }
-void Server::udpListen(){
+void iServer::udpListen(){
     std::cout<<"UDP Listener Active\n";
     char buff[1024];
     int n;
@@ -72,10 +59,11 @@ void Server::udpListen(){
     while(!_end){
         n = recvfrom(_udpSock, buff, 1024, 0, (struct sockaddr*)&from, &fromlen);
         if(n < 0) error("ERROR on receive\n");
-        printf( "Received a datagram from: %s\n", inet_ntoa(from.sin_addr));
+        _onUdpMessage(buff, from);
+        //printf( "Received a datagram from: %s\n", inet_ntoa(from.sin_addr));
         
-        write(1, buff, n);
-        std::cout<<"\n";
+        //write(1, buff, n);
+        //std::cout<<"\n";
        /* if(buff[0] == '-' && buff[1] == 'n' && buff[2] == '-'){
             //create new connection 
             all_conns[connCount] = from;
@@ -98,10 +86,10 @@ void Server::udpListen(){
     }
     std::cout<<"ENDING THE UDP LOOP\n";
 }
-void Server::tcpListen(){
+void iServer::tcpListen(){
     std::cout<<"Tcp Listener Active\n";
     int newsockfd, pid;
-    while(1){
+    while   (1){
         newsockfd = tcpAcceptConns(); 
         pid = fork();
         if(pid < 0){
@@ -119,7 +107,7 @@ void Server::tcpListen(){
     
 
 }
-int Server::getMsgId(char* buff){
+int iServer::getMsgId(char* buff){
     char nr[2];
     for(int i =0; i < 2; i++){
         nr[i] = buff[i];
@@ -127,7 +115,7 @@ int Server::getMsgId(char* buff){
     return atoi(nr);
 }
 
-void Server::tcpHandleConns(int clientSock){
+void iServer::tcpHandleConns(int clientSock){
     while(1){
         int n;
         char buffer[256]; 
@@ -136,10 +124,11 @@ void Server::tcpHandleConns(int clientSock){
         n = read(clientSock, buffer, 255);
         if(n < 0) error("ERROR on reading from socket\n");
         if(n == 0) return;
+        _onTcpMessage(buffer, clientSock);
         // 00 00 data the first 2 are the enum id
-        int id = getMsgId(buffer);
-        printf("client said %s\n",buffer);
-        _allMsgHandles[id](buffer, clientSock);
+        //int id = getMsgId(buffer);
+        //printf("client said %s\n",buffer);
+        //_allMsgHandles[id](buffer, clientSock);
         
         n = write(clientSock, "Got your message", 16);  
         if( n < 0 ) error("ERROR write to socket\n");
@@ -147,12 +136,11 @@ void Server::tcpHandleConns(int clientSock){
 
 }
 
-int Server::tcpAcceptConns(){
+int iServer::tcpAcceptConns(){
     unsigned int clilen;
     struct sockaddr_in cli_addr;
     clilen = sizeof(cli_addr);
     int newConn = accept(_tcpSock, (struct sockaddr*)& cli_addr, &clilen);   
-    _callHandler.handleTLogIn(newConn);
     if(newConn < 0){
         error("ERROR on accept\n");
     }
@@ -162,12 +150,12 @@ int Server::tcpAcceptConns(){
 
 }
 
-void Server::error(const char* msg){
+void iServer::error(const char* msg){
     perror(msg);
     exit(0);
 }
 
-void Server::end(){
+void iServer::end(){
     std::cout<<"End called\n";
     _end = true;
 
@@ -182,6 +170,6 @@ void Server::end(){
     sendto(_udpSock, "E", 1, 0, (struct sockaddr*)&serv_addr, sizeof(struct sockaddr_in));    
 }
 
-void Server::cleanUp(){
+void iServer::cleanUp(){
 }
 

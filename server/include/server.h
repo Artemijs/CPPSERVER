@@ -1,18 +1,21 @@
 #include <vector>
-#include "servcalls.h"
-class Server{
-private:
+#include <netinet/in.h>
+typedef void (*function_ptr)(char*);
+typedef void (*msgCallBackTcp)(char*, int);
+typedef void (*msgCallBackUdp)(char*, sockaddr_in);
+class iServer{
+protected:
     int _udpSock;
     int _tcpSock;
     int _port;
     bool _end;
-    ServerCallbacks _callHandler;
     std::vector<function_ptr> _allMsgHandles;
-    void loadHandles();
-    
+    //void loadHandles();
+    msgCallBackTcp _onTcpMessage;
+    msgCallBackUdp _onUdpMessage; 
 public:
-    Server();
-    Server(int port);
+    iServer();
+    iServer(int port);
     void tcpSetUpSocket();
     void udpSetUpSocket();
     void tcpListen();

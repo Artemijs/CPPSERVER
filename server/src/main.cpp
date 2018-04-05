@@ -1,4 +1,4 @@
-#include "server.h"
+#include "servcalls.h"
 #include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
