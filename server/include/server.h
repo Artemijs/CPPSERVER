@@ -1,8 +1,13 @@
+#ifndef ISERVER
+#define ISERVER
 #include <vector>
 #include <netinet/in.h>
 typedef void (*function_ptr)(char*);
-typedef void (*msgCallBackTcp)(char*, int);
-typedef void (*msgCallBackUdp)(char*, sockaddr_in);
+//typedef void (*msgCallBackTcp)(int);
+class Server;
+typedef void (Server::*msgCallBackTcp)(int, char*);
+class iServer;
+typedef void (iServer::*msgCallBackUdp)(int);
 class iServer{
 protected:
     int _udpSock;
@@ -13,9 +18,11 @@ protected:
     //void loadHandles();
     msgCallBackTcp _onTcpMessage;
     msgCallBackUdp _onUdpMessage; 
+    char* _tcpMsg; 
+    Server* _child;
 public:
     iServer();
-    iServer(int port);
+    iServer(int port, Server* childPtr);
     void tcpSetUpSocket();
     void udpSetUpSocket();
     void tcpListen();
@@ -26,5 +33,7 @@ public:
     void end();
     void cleanUp();
     int getMsgId(char* buff);
+    int getMsgLen(char* buff, int offset);
+    void hello(int );
 };
-
+#endif

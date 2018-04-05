@@ -36,7 +36,7 @@ class Client(object):
             print "failed to bind"
             sys.exit()
         self.name  = raw_input("Enter your name ")
-        self.conn.sendto("-n-"+getLenStr(self.name)+self.name, (self.HOST, 5555))
+        self.conn.sendto("01"+getLenStr(self.name)+self.name, (self.HOST, self.PORT-1))
 
         data, addr = self.conn.recvfrom(1054)
         print data   
