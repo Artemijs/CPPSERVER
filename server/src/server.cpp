@@ -17,10 +17,6 @@ iServer::iServer(int port, Server* childPtr) : _port(port), _end(false), _child(
     tcpSetUpSocket();
     udpSetUpSocket(); 
     _allMsgHandles = std::vector<function_ptr>(); 
-    //_onUdpMessage =(&iServer::hello);
-}
-void iServer::hello(int lol){
-    std::cout <<"Greetings from "<<(lol)<<"\n";
 }
 void iServer::udpSetUpSocket(){
     struct sockaddr_in server;
@@ -64,11 +60,9 @@ void iServer::udpListen(){
     while(!_end){
         n = recvfrom(_udpSock, buff, 1024, 0, (struct sockaddr*)&from, &fromlen);
         if(n < 0) error("ERROR on receive\n");
-        //_onTcpMessage(0);
         
         printf( "Received a datagram from: %s\n", inet_ntoa(from.sin_addr));
-        //_onUdpMessage(buff, from);
-        //(*this.*_onUdpMessage)(10);
+        (*_child.*_onUdpMessage)(buff, from);
         
         //write(1, buff, n);
         //std::cout<<"\n";
@@ -132,11 +126,8 @@ void iServer::tcpHandleConns(int clientSock){
         n = read(clientSock, buffer, 255);
         if(n < 0) error("ERROR on reading from socket\n");
         if(n == 0) return;
-        //i had it passed an arg to _onTcpMessage but that gave me segmentation errors
-        //nowi store this in a global variable and use it inside the function anyway
-        _tcpMsg = buffer;
 
-        (*_child.*_onTcpMessage)(10, "GRRRRRRRRRRRR");
+        (*_child.*_onTcpMessage)(clientSock, buffer);
         //(*this.*_onUdpMessage)(10);
         //_onTcpMessage( clientSock);
         //struct sockaddr_in lol;

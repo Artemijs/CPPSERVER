@@ -6,8 +6,7 @@ typedef void (*function_ptr)(char*);
 //typedef void (*msgCallBackTcp)(int);
 class Server;
 typedef void (Server::*msgCallBackTcp)(int, char*);
-class iServer;
-typedef void (iServer::*msgCallBackUdp)(int);
+typedef void (Server::*msgCallBackUdp)(char*, struct sockaddr_in);
 class iServer{
 protected:
     int _udpSock;
@@ -18,7 +17,6 @@ protected:
     //void loadHandles();
     msgCallBackTcp _onTcpMessage;
     msgCallBackUdp _onUdpMessage; 
-    char* _tcpMsg; 
     Server* _child;
 public:
     iServer();
@@ -34,6 +32,5 @@ public:
     void cleanUp();
     int getMsgId(char* buff);
     int getMsgLen(char* buff, int offset);
-    void hello(int );
 };
 #endif

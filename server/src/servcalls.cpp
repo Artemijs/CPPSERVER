@@ -4,7 +4,7 @@ Server::Server():iServer(){}
 Server::Server(int port): iServer(port, this) {
     _allPlayers = std::vector<Player>();
     _onTcpMessage = (&Server::onTcpMessage);
-    //_onUdpMessage = (&Server::onUdpMessage);
+    _onUdpMessage = (&Server::onUdpMessage);
     std::cout << &_onUdpMessage<<"\n";
     std::cout << &_onTcpMessage<<"\n";
 }
