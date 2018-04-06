@@ -32,5 +32,6 @@ public:
     void cleanUp();
     int getMsgId(char* buff);
     int getMsgLen(char* buff, int offset);
+    void getLenStr(char* str, int len);
 };
 #endif

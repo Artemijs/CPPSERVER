@@ -137,9 +137,7 @@ void iServer::tcpHandleConns(int clientSock){
         //printf("client said %s\n",buffer);
         //_allMsgHandles[id](buffer, clientSock);
         
-        n = write(clientSock, "Got your message", 16);  
-        if( n < 0 ) error("ERROR write to socket\n");
-    }
+     }
 
 }
 
@@ -188,3 +186,15 @@ int iServer::getMsgLen(char* buff, int offset){
     return atoi(nr);
 }
 
+void iServer::getLenStr(char* str, int len){
+    std::string strlen = std::to_string(len);
+    if(strlen.length() < 2){
+        str[0] = '0';
+        str[1] = strlen[0];
+    }
+    else{
+        str[0] = strlen[0];
+        str[1] = strlen[1];
+    }
+     
+}

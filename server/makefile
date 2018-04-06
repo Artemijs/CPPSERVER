@@ -1,7 +1,7 @@
 OBJ_DIR     := build/objects
 
 CC          = gcc
-CFLAGS      = -Wall -g
+CFLAGS      = -Wall -g -std=c++11
 LFLAGS     := -L/usr/lib -lstdc++ -lm
 INCLUDE     := -Iinclude/
 

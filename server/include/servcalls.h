@@ -12,6 +12,7 @@ struct Player{
     sockaddr_in uConn;
     int tConn;
     std::string name;
+    int id;
 };
 
 class Server : public iServer{
