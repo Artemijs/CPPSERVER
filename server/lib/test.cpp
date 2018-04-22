@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string.h>
 class Super;
 typedef void(Super::*func)();
 class Base{
@@ -28,7 +29,13 @@ public:
     }
 };
 int main(int argc, char* argv[]){
-    Super s = Super();
+    //Super s = Super();
+    char ten[11];
+    //memset(ten, 0x00, 11);    
+    for(int i =0; i < 10; i++){
+        (ten[i]) = '+'; 
+    }
+    char* eight = &(ten[2]);
     //s.Greet();
     return 0;
 }

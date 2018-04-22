@@ -14,10 +14,11 @@
 iServer::iServer(){}
 
 iServer::iServer(int port, Server* childPtr) : _port(port), _end(false), _child(childPtr){
-    tcpSetUpSocket();
     udpSetUpSocket(); 
-    _allMsgHandles = std::vector<function_ptr>(); 
 }
+
+
+
 void iServer::udpSetUpSocket(){
     struct sockaddr_in server;
 
@@ -33,36 +34,20 @@ void iServer::udpSetUpSocket(){
         error("ERROR on bind\n");
 
 }
-void iServer::tcpSetUpSocket(){
-    _tcpSock = socket(AF_INET, SOCK_STREAM, 0);
-    if(_tcpSock <0){
-        error("ERROR opening socket \n");
-    }
-   
-    struct sockaddr_in serv_addr;
-    bzero((char*)&serv_addr, sizeof(serv_addr)); 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(_port);
 
-    if(bind(_tcpSock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0){
-        error("ERROR on binding \n");
-    }
-    
-    listen(_tcpSock, 5);
-}
-void iServer::udpListen(){
+void iServer::udpListen(std::vector<function_ptr>* ptr ){
     std::cout<<"UDP Listener Active\n";
     char buff[1024];
+    memset(buff, 0x00, 1024);
     int n;
     struct sockaddr_in from;
     unsigned int fromlen = sizeof(struct sockaddr_in);
     while(!_end){
+        
         n = recvfrom(_udpSock, buff, 1024, 0, (struct sockaddr*)&from, &fromlen);
         if(n < 0) error("ERROR on receive\n");
-        
-        printf( "Received a datagram from: %s\n", inet_ntoa(from.sin_addr));
-        (*_child.*_onUdpMessage)(buff, from);
+        //printf( "Received a datagram from: %s\n", inet_ntoa(from.sin_addr));
+        (*_child.*_onUdpMessage)(buff, from, ptr);
         
         //write(1, buff, n);
         //std::cout<<"\n";
@@ -88,27 +73,6 @@ void iServer::udpListen(){
     }
     std::cout<<"ENDING THE UDP LOOP\n";
 }
-void iServer::tcpListen(){
-    std::cout<<"Tcp Listener Active\n";
-    int newsockfd, pid;
-    while   (1){
-        newsockfd = tcpAcceptConns(); 
-        pid = fork();
-        if(pid < 0){
-            error("ERROR on fork \n");
-        }
-        if(pid == 0){
-            close(_tcpSock);//?
-            tcpHandleConns(newsockfd);
-            exit(0);
-        }
-        else
-            close(newsockfd);
-    }
-    close(_tcpSock);
-    
-
-}
 int iServer::getMsgId(char* buff){
     char nr[2];
     for(int i =0; i < 2; i++){
@@ -117,43 +81,7 @@ int iServer::getMsgId(char* buff){
     return atoi(nr);
 }
 
-void iServer::tcpHandleConns(int clientSock){
-    while(1){
-        int n;
-        char buffer[256]; 
-        
-        bzero(buffer, 256);
-        n = read(clientSock, buffer, 255);
-        if(n < 0) error("ERROR on reading from socket\n");
-        if(n == 0) return;
 
-        (*_child.*_onTcpMessage)(clientSock, buffer);
-        //(*this.*_onUdpMessage)(10);
-        //_onTcpMessage( clientSock);
-        //struct sockaddr_in lol;
-        //_onUdpMessage(buffer, lol);
-        // 00 00 data the first 2 are the enum id
-        //int id = getMsgId(buffer);
-        //printf("client said %s\n",buffer);
-        //_allMsgHandles[id](buffer, clientSock);
-        
-     }
-
-}
-
-int iServer::tcpAcceptConns(){
-    unsigned int clilen;
-    struct sockaddr_in cli_addr;
-    clilen = sizeof(cli_addr);
-    int newConn = accept(_tcpSock, (struct sockaddr*)& cli_addr, &clilen);   
-    
-    if(newConn < 0){
-        error("ERROR on accept\n");
-    }
-    std::cout<<"connected "<<cli_addr.sin_addr.s_addr<<"\n";   
-    return newConn;
-
-}
 
 void iServer::error(const char* msg){
     perror(msg);

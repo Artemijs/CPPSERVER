@@ -21,22 +21,10 @@ int main(int argc, char* argv[]){
     }
     std::cout<<"Starting server \n";
     _server = Server(atoi(argv[1]));
+    std::vector<void(Server::*)(char*, sockaddr_in)>* ptr = _server.getHandles();
     std::cout<<"online\n";
-    int pid = fork();
-    if(pid == 0){
-        signal(SIGHUP, sighandle);
-        _server.tcpListen();    
-    }
-    else if (pid>0){
-        signal(SIGINT, ctrlhandle);
-        _server.udpListen();
-        //end process of the tcp listener
-        //only happens when udp stops listening which only happens when ctrl c is pressed
-        kill(pid, SIGHUP);
-    }
-    else{
-        std::cout<<"SOMETHING IS NOT RIGHT HERE\n";
-    }
+    signal(SIGINT, ctrlhandle);
+    _server.udpListen( ptr);
     _server.cleanUp();
     return 0;
 }
