@@ -11,6 +11,8 @@ Server::Server():iServer(){
 }
 Server::Server(int port): iServer(port, this) {
     _allPlayers = std::vector<Player>();
+    _allOffline = std::vector<Player>();
+
     _onUdpMessage = (&Server::onUdpMessage);
 
     _allMsgHandles =  std::vector<function_ptr>(); 
@@ -58,6 +60,15 @@ void Server::sendToAll(char* buff, int msgLen){
 void Server::handlePosition(char* buff, sockaddr_in client){
     int len = getMsgLen(buff, 2);
     sendToAll(buff, len+4); 
+    //find the clients player and update his position
+    int id = getMsgLen(buff, 4);   
+    id = checkId(id, client);
+    Player p = _allPlayers[id];
+    /*char pos[len-4];
+    memset(pos, 0x00, len-4);
+    (pos[0]) = (*buff[4]);*/
+    p.position = std::string(&(buff[7]));
+    _allPlayers[id] = p;
 }
 
 void Server::chatMsg(char* buff, sockaddr_in client){
@@ -71,9 +82,9 @@ void Server::removePlayer(char* buff, sockaddr_in client){
     int id = getMsgLen(buff, 4);
     //char* b2 = &buff[2];
     //int id = atoi(b2);
-    std::cout<<"REMOVING PLAYER "<<id<<"/"<<_allPlayers.size()<<"  "<<buff<<"\n";
     Player p = _allPlayers[id];
-    int len = _allPlayers.size();
+    std::cout<<"REMOVING PLAYER "<<id<<"/"<<_allPlayers.size()<<"  "<<buff<<"\n";
+    /*int len = _allPlayers.size();
     if(p.id != id){
         id = -1;
         for(int i =0; i < len; ++i){
@@ -82,14 +93,24 @@ void Server::removePlayer(char* buff, sockaddr_in client){
             }
         } 
         if(id == -1) return;
+    }*/
+    id = checkId(id, client);
+    if(id < 0){
+        std::cout<<"INVALID ID \n";
+        return;
     }
+    int len = _allPlayers.size();
     _allPlayers.erase(_allPlayers.begin()+id);
+    for(int i =0; i < len; ++i){
+        _allPlayers[i].id = i;
+    }
     //this needs to inform others that a player has left
     char str[5];
     memset(str, 0x00, 5);
     getLenStr(&(str[0]), PLAYER_LEFT);
     getLenStr(&(str[2]), p.id);     
     sendToAll(str, 4);
+    _allOffline.push_back(p);
 }
 
 void Server::handleLoadPlayers(char* buff, sockaddr_in client){
@@ -100,7 +121,8 @@ void Server::handleLoadPlayers(char* buff, sockaddr_in client){
     
     for(unsigned int i =0; i < _allPlayers.size(); ++i){
         //this shold be a function called serialise player or somethin
-        s+=_allPlayers[i].name+"," + std::to_string(_allPlayers[i].id) + "|";
+        s += serializePlayer(_allPlayers[i]);
+        //_allPlayers[i].name+"," + std::to_string(_allPlayers[i].id) + "|";
     }
     s = std::string(buf)+s;
     std::cout<<"Sending :"<<s<<"\n";
@@ -115,48 +137,71 @@ void Server::handleLoadPlayers(char* buff, sockaddr_in client){
 void Server::handleLogIn(char* name, sockaddr_in client){
     Player newP;
     bzero(&newP, sizeof(newP));
+    
+    //getMsgLen does not include the lenght of the header which is 4
+    int len = getMsgLen(name, 2) + 4;
 
-    int len = getMsgLen(name, 2);
-    char buff[len+1];
-    memset(buff, 0x00, len+1);
-
-    //the reason i start at 4 is because the first 2 chars are msg id next 2 are msg len
-    for(int i = 0; i < len; i++){
-        buff[i] = name[i+4];
-    } 
-
-    newP.name = std::string(buff);
-    newP.id = _allPlayers.size();
-    newP.uConn = client;
-
-    _allPlayers.push_back(newP);
-    std::cout<<"Created player "<<newP.id<<" "<<newP.name<<"\n";
-    //send back id
-    //std::string s = std::to_string(newP.id);
+    char nameBuff[len];
+    memset(nameBuff, 0x00, len);
+    char loginBuff[len];
+    memset(loginBuff, 0x00, len);
     char reply[5];
     memset(reply, 0x00, 5);
-    char idstr[2];
-    getLenStr(idstr, LOGIN);
-    reply[0] = idstr[0];
-    reply[1] = idstr[1];
-    getLenStr(idstr, newP.id);
-    reply[2] = idstr[0];
-    reply[3] = idstr[1];
-   
-    
-    //printf("this is da wae %s \n", reply);
-    //std::cout<<" the is is "+reply+"\n";
 
+    //the reason i start at 4 is because the first 2 chars are msg id next 2 are msg len
+    int i = 4;
+    for(; i < len; i++){
+        if(name[i] == '|') break;
+        nameBuff[i-4] = name[i];
+    }
+    //remove the '|'
+    i++;
+    int l = len - i;
+    for(int j = 0; j < l; j++){
+        loginBuff[j] = name[i];
+        i++;
+    }
+    int offline = checkIfOffline(loginBuff);
+    int online = checkIfOnline(loginBuff);
+    //if online throw error
+    //if offline login
+    if(online >= 0){
+        std::cout<<"Player already EXISTS "<<loginBuff<<"\n";
+        getLenStr(reply, LOGIN);
+        reply[2]='-';
+        reply[3] = '1';
+        int n = sendto(_udpSock, reply, 4, 0, (struct sockaddr*) &client, sizeof(struct sockaddr_in));
+        if( n < 0 ) error("ERROR write to socket\n");
+        return;
+    }
+    if(offline >= 0){
+        newP = _allOffline[offline];
+        newP.id = _allPlayers.size();
+        _allOffline.erase(_allOffline.begin()+offline);
+
+        std::cout<<"Player LOADED "<<loginBuff<<newP.position<<"\n";
+    }
+    else{
+        newP.name = std::string(nameBuff);
+        newP.id = _allPlayers.size();
+        newP.uConn = client;
+        newP.login = std::string(loginBuff);
+        newP.position = "0,0,0#0,0,0";
+
+        std::cout<<"Created player "<<newP.id<<" "<<newP.name<<"  "<<newP.login<<"\n";
+    }
+    _allPlayers.push_back(newP);
+
+    //send back id
+    getLenStr(reply, LOGIN);
+    getLenStr(&(reply[2]), newP.id);
+   
     int n = sendto(_udpSock, reply, 4, 0, (struct sockaddr*) &client, sizeof(struct sockaddr_in));
-    //int n = write(clientSock, reply, 4);  
     if( n < 0 ) error("ERROR write to socket\n");
-   //this needs to inform others that a new player has joined 
-    char buf[3];
-    memset(buf, 0x00, 3);
-    getLenStr(buf, LOADPLAYERS);
-    std::string s = std::string(buf) + newP.name+"," + std::to_string(newP.id) + "|";
-    std::cout<<newP.name<<"\n";
-    std::cout<<"sending to all "<<s<<"\n";
+
+   //this informs others that a new player has joined 
+    std::string s = serializePlayer(LOADPLAYERS, newP);
+    std::cout << s<<"\n";
     sendToAllExcept(s.c_str(), s.length()+2, newP);
 }
 
@@ -181,4 +226,47 @@ void Server::loadCallbacks(){
 
 std::vector<void(Server::*)(char*, sockaddr_in)>* Server::getHandles(){
     return &_allMsgHandles;
+}
+
+int Server::checkIfOnline(char* login){
+    for(unsigned int i = 0; i < _allPlayers.size(); ++i){
+        if(_allPlayers[i].login.compare(login) == 0){
+            return i;
+        }  
+    }
+    return -1;
+}
+
+int Server::checkIfOffline(char* login){
+    for(unsigned int i = 0; i < _allOffline.size(); ++i){
+        if(_allOffline[i].login.compare(login) == 0){
+            return i;
+        }  
+    } 
+    return -1;
+}
+
+
+
+std::string Server::serializePlayer(int msgType,struct Player p){
+    char b[2]; 
+    getLenStr(b, msgType);
+    return std::string(b) + p.name+"," + std::to_string(p.id) + "#" + p.position + "|";
+}
+std::string Server::serializePlayer(struct Player p){
+    
+    return p.name+"," + std::to_string(p.id) + "#" + p.position + "|";
+}
+
+int Server::checkId(int id, struct sockaddr_in pAddr){
+    if(pAddr.sin_addr.s_addr == _allPlayers[id].uConn.sin_addr.s_addr){
+        return id;
+    }
+    for(unsigned int i =0; i < _allPlayers.size(); ++i){
+        if(pAddr.sin_addr.s_addr == _allPlayers[i].uConn.sin_addr.s_addr){
+            id = i;
+            return id;
+        }
+    }
+    return -1;
 }

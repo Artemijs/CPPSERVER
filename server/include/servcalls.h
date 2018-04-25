@@ -16,6 +16,7 @@ enum NetCalls{
 struct Player{
     sockaddr_in uConn;
     std::string name;
+    std::string login;
     int id;
     std::string position; 
 };
@@ -23,6 +24,7 @@ struct Player{
 class Server : public iServer{
 private:
     std::vector<Player> _allPlayers;
+    std::vector<Player> _allOffline;
     std::vector<function_ptr> _allMsgHandles;
 public:
     Server();
@@ -62,6 +64,7 @@ public:
     */
     void removePlayer(char* buff, sockaddr_in clientAddr); 
     /*
+        checks if player already exists
         creates a new Player struct, adds it to _allPlayers and returns ID to client
         buff : contains name of new player
         players id is its position in _allPlayers
@@ -80,5 +83,17 @@ public:
         DO NOT TOUCH THIS PRECIOUS THING
     */
     std::vector<function_ptr>* getHandles();
+        
+    std::string serializePlayer(int msgType, struct Player p);
+    std::string serializePlayer( struct Player p);
+    /*
+        checks if id matches with _allPlayers[id].id and if not 
+        finds the player is does match with
+        retruns -1 if nothing found
+    */
+    int checkId(int id, struct sockaddr_in);
+    
+    int checkIfOnline(char* login);
+    int checkIfOffline(char* login);
 };
 #endif

@@ -37,8 +37,10 @@ class Client(object):
         except socket.error:
             print ("failed to bind1 " + str(self.PORT))
             sys.exit(0)
-        self.name  = 'bot'+str(mp)#input("Enter your name ")
-        self.conn.sendto(("00"+getLenStr(self.name)+self.name).encode('utf-8'), (self.HOST, 5556))
+        self.name  = 'bot'#input("Enter your name ")
+        self.login = "bot" + str(mp)
+        lmsg = self.name+"|"+self.login
+        self.conn.sendto(("00"+getLenStr(lmsg)+lmsg).encode('utf-8'), (self.HOST, 5556))
         data, addr = self.conn.recvfrom(1054)
         data = data.decode('utf-8')
         self.id = data[2:];
@@ -61,12 +63,12 @@ class Client(object):
 
     def main(self):
 
-        rInt = randint(0,100)
+        '''rInt = randint(0,100)
         if rInt >= 50 and rInt <=60:
-            self.sendMsg(self.chatTxt[randint(0, len(self.chatTxt)-1)])
+            self.sendMsg(self.chatTxt[randint(0, len(self.chatTxt)-1)])'''
 
         if self.dist(self.POS, self.TARGET) < 10:
-            self.TARGET = [randint(0, 200) - 100, 0, randint(0, 200) - 100]
+            self.TARGET = [randint(0, 2000) - 1000, 0, randint(0, 2000) - 1000]
             print "CHANGING TARGET "+str(self.TARGET[0])+" "+ str(self.TARGET[1])+" "+ str(self.TARGET[2])
 
         #id#x,y,z#x,y,z
