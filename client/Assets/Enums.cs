@@ -1,4 +1,5 @@
 ﻿
+
 public enum NetCalls{
 	LOGIN = 0,
 	LOADPLAYERS,
