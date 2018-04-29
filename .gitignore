@@ -290,3 +290,6 @@ __pycache__/
 #vim save back ups
 *.swp
 *.out
+
+#build directory
+build/
