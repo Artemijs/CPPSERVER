@@ -144,6 +144,7 @@ class FTServer(object):
         self.ResetState()
 
     def MkDirs(self, folders):
+        
         for f in folders:
             if os.path.isdir(self.WRITE_DIR + f) == False:
                 os.mkdir(self.WRITE_DIR + f)
@@ -163,4 +164,6 @@ def main():
             
 main()
 print("Bye!")
-
+'''TO DO:
+the duplicate doesnt work well, i cant add different files without deleting
+whats already there. The check for dupe should be in mkdir'''
