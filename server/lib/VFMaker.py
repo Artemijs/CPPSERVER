@@ -77,5 +77,5 @@ class VersionMaker(object):
 			countOfFiles+=1
 
 
-vfm = VersionMaker()
-vfm.Run()
+#vfm = VersionMaker()
+#vfm.Run()
