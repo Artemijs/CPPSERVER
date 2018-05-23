@@ -68,7 +68,7 @@ class Comparer(object):
 				self.nevvFile.seek(nlast)
 				self.originalFile.seek(r[0]+olast)
 				#print(r)
-				changes.append([olast, r[0]+olast, r[1]])#self.nevvFile.read(r[1])])
+				changes.append([olast, r[0]+olast, nlast, r[1]])#self.nevvFile.read(r[1])])
 				self.nevvFile.seek(nlast+r[1])
 				state = 0
 		self.End()
@@ -77,8 +77,33 @@ class Comparer(object):
 		self.originalFile.close()
 		self.nevvFile.close()
 '''
-comp = Comparer(6)
-res = comp.Compare('./old.txt', 'nevv.txt')
-for r in res:
-	print(r) 
+on = "./test/old.txt"
+nn = "./test/new.txt"
+tn = "./test/temp.txt"
+tFile = open(tn,"wb")
+comp = Comparer(100)
+changes = comp.Compare(on, nn)
+
+def getData(name, pos, lenOfD):
+    with open(name, "rb") as file:
+        file.seek(pos)
+        return file.read(lenOfD)
+        
+for i in range(0, len(changes)):
+    s = 0
+    pos = 0
+    if i == 0:
+        s = changes[i][0]
+    else:
+        pos = changes[i-1][1]
+        s = changes[i][0]-pos
+	print "size "+str(s)
+    data = getData(on, pos, s)
+    tFile.write(data)
+    data = getData(nn, changes[i][2], changes[i][3])
+    print "GETTING DATA "+str(changes[i][2]) + " " +str(changes[i][3]) +": " + data
+    tFile.write(data)
+
+
+tFile.close()
 '''

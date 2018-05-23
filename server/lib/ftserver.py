@@ -1,4 +1,4 @@
-
+from VFMaker import VersionMaker
 import sys
 import socket
 import json
@@ -19,6 +19,7 @@ class FTServer(object):
         self.BUILD_DIR = self.ROOT_DIR+"build/"
         self.WRITE_DIR = self.ROOT_DIR
         self.sock= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.vfm = VersionMaker(self.BUILD_DIR, self.BUILD_DIR[:-1]+"0/", self.ROOT_DIR+"vf/") 
         try:
             self.sock.bind(("", self.PORT))
         except socket.error as e:
@@ -38,6 +39,7 @@ class FTServer(object):
                         '111' : self.SetDupe,
                         '113' : self.SetWriteDir,
                         '114' : self.GitPush,
+                        '115' : self.CompileVersion,
         }
         self.totalSize = 0
         self.size = 0
@@ -54,7 +56,7 @@ class FTServer(object):
         d = data
         print "write dir : "+d
         if d == 'build':
-            self.WRITE_DIR = self.BUILD_DIR
+            self.WRITE_DIR = self.BUILD_DIR[:-1]+"0/"
         else:
             self.WRITE_DIR = self.CLIENT_DIR
         self.ResetState()
@@ -113,6 +115,18 @@ class FTServer(object):
             self.conn.sendall('k')
             self.ResetState() 
 
+    def CompileVersion(self, data):
+        print"Compiling Version data"  
+        #comiple the version
+        self.vfm.Run()
+        #remove build
+        #shutil.rmtree(self.BUILD_DIR)
+        #os.rename(self.BUILD_DIR[:-1]+"0/", self.BUILD_DIR)
+        #rename build0 to build
+
+        self.conn.sendall('k')
+        self.ResetState()
+
     def ChangeState(self, data):
         self.state = data[0:3]
         size = data[3:]
@@ -148,7 +162,7 @@ class FTServer(object):
         for f in folders:
             if os.path.isdir(self.WRITE_DIR + f) == False:
                 os.mkdir(self.WRITE_DIR + f)
-
+        
     def End(self):
         self.alive = False
         self.sock.close()

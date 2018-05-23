@@ -1,7 +1,8 @@
 import socket
 import sys
 from thread import *
-
+import os
+import json
 if len(sys.argv) <2:
     print "missing arg PORT"
     sys.exit(0)
@@ -24,30 +25,78 @@ class Client(object):
         self.conn = conn
         self.Run()
 
+    def GetDirContents(self, srcDir):
+        folders = []
+        filesFull = []
+        for root, dirs, files in os.walk(srcDir):
+            if root != './':
+                folders.append(root)
+            if len(files) <= 0:
+                continue
+            for f in files:
+                filesFull.append(root + "/" + f)
+        return [folders, filesFull]
+
     def Run(self):
         #send size of index data
-        #self.conn.send("Welcome")
-        self.Send("Welcome".encode("utf-8"))
-        self.Send("Welcome2".encode("utf-8"))
-        while True:
+        dir_files = self.GetDirContents("../vf")
+        print dir_files[0]
+        for f in dir_files[1]:
+            print "SENDING FUCKING FILE "+f
+            self.SendFile(f)
+            
+        '''while True:
             data = self.conn.recv(1024)
             print data
             if not data:
                 break
             #self.conn.sendall("k")
-
+        '''
         self.conn.close()
         print"some one left"
 
+    def GetOtherFile(self, original):
+        print original
+        return original[original.find("/build")+6:]
+
+    def SendFile(self, fileName):
+        print "sending "+fileName
+        #send name 
+        otherFile = self.GetOtherFile(fileName)
+        self.Send(otherFile.encode("utf-8"))
+        otherFile = "../build0/"+fileName[fileName.find("/vf")+3:]
+        #send size of file
+        #self.conn.sendall((str(len(data))+"_").encode('utf-8'))i
+        #self.conn.recv(1)
+        print str(os.stat(fileName).st_size)
+        self.Send(str(os.stat(fileName).st_size).encode("utf-8"))
+        allData = json.loads(self.SendFileData(fileName)) 
+        with open(otherFile, "rb") as file:
+            for i in allData:
+                file.seek(i[2])
+                data = file.read(i[3])                
+                self.Send(data)
+                print "GETTING DATA "+str(i[2]) + " " +str(i[3]) +": " + data
+     
+
+    def SendFileData(self, fileName):
+        allData = ""
+        print fileName
+        with open(fileName, "rb") as file:
+            while True:
+                data = file.read(1024)  
+                print "sending "+str(len(data))
+                if not data:
+                    break
+                allData+= data.decode("utf-8")
+                self.Send(data)
+        return allData
+       
     def Send(self, data):
-        print"send 1"
         self.conn.sendall((str(len(data))+"_").encode('utf-8'))
-        print"recv1 "
         self.conn.recv(1)
       
-        print"send 2"
         self.conn.sendall(data)       
-        print"recv2 "
         self.conn.recv(1)
 
 while 1:
